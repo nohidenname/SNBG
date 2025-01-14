@@ -339,3 +339,129 @@ def get_traget_ec_matrix(matrix1,matrix2,matrix3,matrix4,matrix5,matrix6):
         thresh_matrix = np.vstack((thresh_list))
         matrix_list.append(thresh_matrix)
     return matrix_list
+
+def get_test_data(ad_matrices,cn_matrices,W,s):
+    #select atlas file
+    df = pd.read_csv(r"your atlas file")
+
+    ad_sub_list = get_sub_list(ad_matrices,df)
+    group_ad_MF,group_ad_FP,group_ad_DM = get_groups(ad_sub_list)
+
+    cn_sub_list = get_sub_list(cn_matrices,df)
+    group_cn_MF,group_cn_FP,group_cn_DM = get_groups(cn_sub_list)
+
+    window_size = W
+    stride = s
+    cut_ad_MF = get_cut_data(group_ad_MF,window_size,stride)
+    cut_ad_FP = get_cut_data(group_ad_FP,window_size,stride)
+    cut_ad_DM = get_cut_data(group_ad_DM,window_size,stride)
+    cut_cn_MF = get_cut_data(group_cn_MF,window_size,stride)
+    cut_cn_FP = get_cut_data(group_cn_FP,window_size,stride)
+    cut_cn_DM = get_cut_data(group_cn_DM,window_size,stride)
+
+    #pcc_based method
+    ad_thresh_cut_MF = pcc_method(cut_ad_MF)
+    ad_thresh_cut_FP = pcc_method(cut_ad_FP)
+    ad_thresh_cut_DM = pcc_method(cut_ad_DM)
+    cn_thresh_cut_MF = pcc_method(cut_cn_MF)
+    cn_thresh_cut_FP = pcc_method(cut_cn_FP)
+    cn_thresh_cut_DM = pcc_method(cut_cn_DM)
+
+    #snbg method
+    zipped_list_ad_MF = list(zip(*cut_ad_MF))
+    zipped_list_ad_FP = list(zip(*cut_ad_FP))
+    zipped_list_ad_DM = list(zip(*cut_ad_DM))
+    zipped_list_cn_MF = list(zip(*cut_cn_MF))
+    zipped_list_cn_FP = list(zip(*cut_cn_FP))
+    zipped_list_cn_DM = list(zip(*cut_cn_DM))
+    window_sub_ad_MF = [list(x) for x in zipped_list_ad_MF]
+    window_sub_ad_FP = [list(x) for x in zipped_list_ad_FP]
+    window_sub_ad_DM = [list(x) for x in zipped_list_ad_DM]
+    window_sub_cn_MF = [list(x) for x in zipped_list_cn_MF]
+    window_sub_cn_FP = [list(x) for x in zipped_list_cn_FP]
+    window_sub_cn_DM = [list(x) for x in zipped_list_cn_DM]
+
+    ad_thresh_MF = thresh_list_ad(window_sub_ad_MF,window_sub_cn_MF)
+    ad_thresh_FP = thresh_list_ad(window_sub_ad_FP,window_sub_cn_FP)
+    ad_thresh_DM = thresh_list_ad(window_sub_ad_DM,window_sub_cn_DM)
+    cn_thresh_MF = thresh_list_cn(window_sub_cn_MF)
+    cn_thresh_FP = thresh_list_cn(window_sub_cn_FP)
+    cn_thresh_DM = thresh_list_cn(window_sub_cn_DM)
+
+
+    ad_thresh_cut_MF_snbg = turn_construct(ad_thresh_MF)
+    ad_thresh_cut_FP_snbg = turn_construct(ad_thresh_FP)
+    ad_thresh_cut_DM_snbg = turn_construct(ad_thresh_DM)
+    cn_thresh_cut_MF_snbg = turn_construct(cn_thresh_MF)
+    cn_thresh_cut_FP_snbg = turn_construct(cn_thresh_FP)
+    cn_thresh_cut_DM_snbg = turn_construct(cn_thresh_DM)
+
+    return ad_thresh_cut_MF,ad_thresh_cut_FP,ad_thresh_cut_DM,cn_thresh_cut_MF,cn_thresh_cut_FP,cn_thresh_cut_DM,ad_thresh_cut_MF_snbg,ad_thresh_cut_FP_snbg,ad_thresh_cut_DM_snbg,cn_thresh_cut_MF_snbg,cn_thresh_cut_FP_snbg,cn_thresh_cut_DM_snbg
+
+def robust_test(ad_thresh_cut_MF,ad_thresh_cut_FP,ad_thresh_cut_DM,cn_thresh_cut_MF,cn_thresh_cut_FP,cn_thresh_cut_DM,ad_thresh_cut_MF_snbg,ad_thresh_cut_FP_snbg,ad_thresh_cut_DM_snbg,cn_thresh_cut_MF_snbg,cn_thresh_cut_FP_snbg,cn_thresh_cut_DM_snbg):
+    '''PCC-based'''
+    #degree calculate
+    ad_degree_DM = degree_matrix_list(ad_thresh_cut_DM)
+    ad_degree_MF = degree_matrix_list(ad_thresh_cut_MF)
+    ad_degree_FP = degree_matrix_list(ad_thresh_cut_FP)
+    cn_degree_DM = degree_matrix_list(cn_thresh_cut_DM)
+    cn_degree_MF = degree_matrix_list(cn_thresh_cut_MF)
+    cn_degree_FP = degree_matrix_list(cn_thresh_cut_FP)
+    #network's degree features
+    list_degree_DM = []
+    list_degree_FP = []
+    list_degree_MF = []
+    degree_threshold_list = []
+
+    for i in range(len(ad_degree_DM)):
+        feature_DM = calculate_feature(ad_degree_DM[i],cn_degree_DM[i])
+        list_degree_DM.append(feature_DM)
+    for i in range(len(ad_degree_FP)):
+        feature_FP = calculate_feature(ad_degree_FP[i],cn_degree_FP[i])
+        list_degree_FP.append(feature_FP)
+    for i in range(len(ad_degree_MF)):
+        feature_MF = calculate_feature(ad_degree_MF[i],cn_degree_MF[i])
+        list_degree_MF.append(feature_MF)
+
+    for i in range(len(ad_degree_DM)):
+        threshold_feature_ad = np.concatenate([ad_degree_DM[i],ad_degree_FP[i],ad_degree_MF[i]],axis=1)
+        threshold_feature_cn = np.concatenate([cn_degree_DM[i],cn_degree_FP[i],cn_degree_MF[i]],axis=1)
+        threshold_feature = calculate_feature(threshold_feature_ad,threshold_feature_cn)
+        degree_threshold_list.append(threshold_feature)
+    '''DM+FP+MF'''
+    feature_degree = np.vstack((degree_threshold_list))
+    '''SNBG'''
+    #degree calculate
+    ad_degree_DM_snbg = degree_matrix_list(ad_thresh_cut_DM_snbg)
+    ad_degree_MF_snbg = degree_matrix_list(ad_thresh_cut_MF_snbg)
+    ad_degree_FP_snbg = degree_matrix_list(ad_thresh_cut_FP_snbg)
+    cn_degree_DM_snbg = degree_matrix_list(cn_thresh_cut_DM_snbg)
+    cn_degree_MF_snbg = degree_matrix_list(cn_thresh_cut_MF_snbg)
+    cn_degree_FP_snbg = degree_matrix_list(cn_thresh_cut_FP_snbg)
+    #network's degree features
+    list_degree_DM_snbg = []
+    list_degree_FP_snbg = []
+    list_degree_MF_snbg = []
+    degree_threshold_list_snbg = []
+
+    for i in range(len(ad_degree_DM_snbg)):
+        feature_DM_snbg = calculate_feature(ad_degree_DM_snbg[i],cn_degree_DM_snbg[i])
+        list_degree_DM_snbg.append(feature_DM_snbg)
+    for i in range(len(ad_degree_FP_snbg)):
+        feature_FP_snbg = calculate_feature(ad_degree_FP_snbg[i],cn_degree_FP_snbg[i])
+        list_degree_FP_snbg.append(feature_FP_snbg)
+    for i in range(len(ad_degree_MF_snbg)):
+        feature_MF_snbg = calculate_feature(ad_degree_MF_snbg[i],cn_degree_MF_snbg[i])
+        list_degree_MF_snbg.append(feature_MF_snbg)
+
+    for i in range(len(ad_degree_DM_snbg)):
+        threshold_feature_ad_snbg = np.concatenate([ad_degree_DM_snbg[i],ad_degree_FP_snbg[i],ad_degree_MF_snbg[i]],axis=1)
+        threshold_feature_cn_snbg = np.concatenate([cn_degree_DM_snbg[i],cn_degree_FP_snbg[i],cn_degree_MF_snbg[i]],axis=1)
+        threshold_feature_snbg = calculate_feature(threshold_feature_ad_snbg,threshold_feature_cn_snbg)
+        degree_threshold_list_snbg.append(threshold_feature_snbg)
+    '''DM+FP+MF'''
+    feature_degree_snbg = np.vstack((degree_threshold_list_snbg))
+
+    pcc_degree = libsvm(feature_degree,cost) # your cost
+    snbg_degree = libsvm(feature_degree_snbg,cost) # your cost
+    return pcc_degree,snbg_degree
