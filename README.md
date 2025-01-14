@@ -2,7 +2,8 @@
 SNBG provides a group-based brain network construction method to build a single-sample brain network on resting-state functional magnetic resonance imaging data of Alzheimer's disease, aiming to reduce the intra-group differences of samples. The developer is Yikun Zhou from Laboratory of Biomedical Network,Xiamen University of China.
 
 # Overview of SNBG
-![6bd0eab7f7096e2eb80385e6602fa3b9.png](https://ice.frostsky.com/2025/01/02/6bd0eab7f7096e2eb80385e6602fa3b9.png)
+![9ba3bfc94fe03d6854a773768d86e571.png](https://i.miji.bid/2025/01/14/9ba3bfc94fe03d6854a773768d86e571.png)
+
 The process for calculating sample networks using the SNBG method.
 
 # Requirement
@@ -26,6 +27,8 @@ If you want to use the SNBG method, use your own time series dataset as input, r
 If you want to use the pcc-based method, use your own time series dataset as input, run:  pcc_based.ipynb
 
 If you want to calculate the RSD, use your own time series dataset as input, run: rsd_calculate.ipynb
+
+If you want to do the sampling tese, use your own time series dataset as input, run: sampling_test.ipynb
 
 All functions are defined in functions.py
 
